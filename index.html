@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BookMyShow Ticket Notifier</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    
+    h1 {
+      color: #dc3558;
+      font-size: 24px;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+    
+    .status-card {
+      background: #f5f5f5;
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+    
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #999;
+    }
+    
+    .status-dot.active {
+      background: #4CAF50;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    .settings-section {
+      margin-bottom: 20px;
+    }
+    
+    label {
+      display: block;
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 5px;
+      font-weight: 500;
+    }
+    
+    input[type="text"],
+    input[type="number"] {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+    }
+    
+    input:focus {
+      outline: none;
+      border-color: #dc3558;
+    }
+    
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      padding: 10px;
+      background: #f9f9f9;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+    
+    input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+    }
+    
+    button {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      margin-bottom: 10px;
+    }
+    
+    button:active {
+      transform: scale(0.98);
+    }
+    
+    .btn-primary {
+      background: #dc3558;
+      color: white;
+    }
+    
+    .btn-secondary {
+      background: #f0f0f0;
+      color: #333;
+    }
+    
+    .movie-list {
+      margin-top: 20px;
+    }
+    
+    .movie-item {
+      background: #f9f9f9;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+    
+    .movie-title {
+      font-weight: 600;
+      margin-bottom: 5px;
+      color: #333;
+    }
+    
+    .movie-status {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 8px;
+    }
+    
+    .btn-remove {
+      background: #ff4444;
+      color: white;
+      padding: 8px 16px;
+      font-size: 12px;
+      width: auto;
+      margin: 0;
+    }
+    
+    .notification-banner {
+      background: #4CAF50;
+      color: white;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: none;
+      animation: slideDown 0.3s;
+    }
+    
+    @keyframes slideDown {
+      from { transform: translateY(-20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    
+    .notification-banner.show {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎬 BookMyShow Notifier</h1>
+    <p class="subtitle">Get notified when movie tickets are available</p>
+    
+    <div id="notificationBanner" class="notification-banner"></div>
+    
+    <div class="status-card">
+      <div class="status-indicator">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">Monitoring Inactive</span>
+      </div>
+      <div style="font-size: 12px; color: #999;" id="lastCheck"></div>
+    </div>
+    
+    <div class="settings-section">
+      <label>Check Interval (minutes)</label>
+      <input type="number" id="checkInterval" value="5" min="1" max="60">
+    </div>
+    
+    <div class="settings-section">
+      <label class="checkbox-label">
+        <input type="checkbox" id="enableTeams">
+        <span>Send Teams message when available</span>
+      </label>
+      <input type="text" id="teamsEmail" placeholder="email@domain.com">
+    </div>
+    
+    <button class="btn-primary" id="toggleMonitoring">Start Monitoring</button>
+    <button class="btn-secondary" id="checkNow">Check Now</button>
+    
+    <div class="settings-section" style="margin-top: 30px;">
+      <label>Movie Title</label>
+      <input type="text" id="movieTitle" placeholder="e.g., Jana Nayagan">
+      <label style="margin-top: 10px;">BookMyShow API URL</label>
+      <input type="text" id="apiUrl" placeholder="https://in.bookmyshow.com/api/seo/v1/footer?url=...">
+      <button class="btn-primary" id="addMovie" style="margin-top: 10px;">Add Movie</button>
+    </div>
+    
+    <div class="movie-list">
+      <h3 style="font-size: 16px; margin-bottom: 10px; color: #333;">Monitored Movies</h3>
+      <div id="movieListContainer">
+        <div style="text-align: center; color: #999; padding: 20px;">No movies added yet</div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    let movies = JSON.parse(localStorage.getItem('movies') || '[]');
+    let isMonitoring = localStorage.getItem('isMonitoring') === 'true';
+    let checkInterval = parseInt(localStorage.getItem('checkInterval') || '5');
+    let enableTeams = localStorage.getItem('enableTeams') === 'true';
+    let teamsEmail = localStorage.getItem('teamsEmail') || '';
+    let monitoringInterval = null;
+    
+    // Load settings
+    document.getElementById('checkInterval').value = checkInterval;
+    document.getElementById('enableTeams').checked = enableTeams;
+    document.getElementById('teamsEmail').value = teamsEmail;
+    
+    // Initialize
+    updateUI();
+    renderMovies();
+    if (isMonitoring) {
+      startMonitoring();
+    }
+    
+    // Event listeners
+    document.getElementById('toggleMonitoring').addEventListener('click', toggleMonitoring);
+    document.getElementById('checkNow').addEventListener('click', checkNow);
+    document.getElementById('addMovie').addEventListener('click', addMovie);
+    document.getElementById('checkInterval').addEventListener('change', saveSettings);
+    document.getElementById('enableTeams').addEventListener('change', saveSettings);
+    document.getElementById('teamsEmail').addEventListener('blur', saveSettings);
+    
+    function saveSettings() {
+      checkInterval = parseInt(document.getElementById('checkInterval').value);
+      enableTeams = document.getElementById('enableTeams').checked;
+      teamsEmail = document.getElementById('teamsEmail').value;
+      
+      localStorage.setItem('checkInterval', checkInterval);
+      localStorage.setItem('enableTeams', enableTeams);
+      localStorage.setItem('teamsEmail', teamsEmail);
+      
+      if (isMonitoring) {
+        stopMonitoring();
+        startMonitoring();
+      }
+      updateUI();
+    }
+    
+    function toggleMonitoring() {
+      if (isMonitoring) {
+        stopMonitoring();
+      } else {
+        startMonitoring();
+      }
+    }
+    
+    function startMonitoring() {
+      if (movies.length === 0) {
+        alert('Please add at least one movie to monitor');
+        return;
+      }
+      
+      isMonitoring = true;
+      localStorage.setItem('isMonitoring', 'true');
+      
+      checkAllMovies();
+      monitoringInterval = setInterval(() => {
+        checkAllMovies();
+      }, checkInterval * 60 * 1000);
+      
+      updateUI();
+    }
+    
+    function stopMonitoring() {
+      isMonitoring = false;
+      localStorage.setItem('isMonitoring', 'false');
+      
+      if (monitoringInterval) {
+        clearInterval(monitoringInterval);
+        monitoringInterval = null;
+      }
+      
+      updateUI();
+    }
+    
+    async function checkAllMovies() {
+      document.getElementById('lastCheck').textContent = `Checking... ${new Date().toLocaleTimeString()}`;
+      
+      for (const movie of movies) {
+        await checkMovie(movie);
+      }
+      
+      saveMovies();
+      renderMovies();
+    }
+    
+    async function checkMovie(movie) {
+      try {
+        const response = await fetch(movie.apiUrl);
+        const contentType = response.headers.get('content-type');
+        
+        let moviePageUrl = 'https://in.bookmyshow.com';
+        const urlMatch = movie.apiUrl.match(/url=([^&]+)/);
+        if (urlMatch) {
+          const moviePath = decodeURIComponent(urlMatch[1]);
+          moviePageUrl = `https://in.bookmyshow.com${moviePath}`;
+        }
+        
+        let isBookingOpen = false;
+        
+        if (contentType && contentType.includes('json')) {
+          // If JSON, fetch the actual page
+          const pageResponse = await fetch(moviePageUrl);
+          const pageHtml = await pageResponse.text();
+          isBookingOpen = checkHtmlForBooking(pageHtml);
+        } else {
+          // If HTML, check directly
+          const html = await response.text();
+          isBookingOpen = checkHtmlForBooking(html);
+        }
+        
+        movie.lastChecked = new Date().toISOString();
+        movie.lastStatus = isBookingOpen ? 'available' : 'not available';
+        
+        if (isBookingOpen) {
+          handleTicketsAvailable(movie, moviePageUrl);
+        }
+      } catch (error) {
+        console.error('Error checking movie:', error);
+      }
+    }
+    
+    function checkHtmlForBooking(html) {
+      const htmlLower = html.toLowerCase();
+      
+      const hasBookTicketsButton = htmlLower.includes('book tickets') || 
+                                   htmlLower.includes('buy tickets');
+      
+      const isComingSoon = htmlLower.includes('coming soon') ||
+                          htmlLower.includes('notify me when') ||
+                          htmlLower.includes('releasing on');
+      
+      if (hasBookTicketsButton) {
+        return true;
+      }
+      
+      return false;
+    }
+    
+    function handleTicketsAvailable(movie, moviePageUrl) {
+      showNotification(`🎉 Tickets Available for ${movie.title}!`);
+      
+      // Open booking page
+      window.open(moviePageUrl, '_blank');
+      
+      // Send Teams message if enabled
+      if (enableTeams && teamsEmail) {
+        const message = `🎬 BookMyShow Alert!\n\nTickets are now available for ${movie.title}!\n\nBook now: ${moviePageUrl}`;
+        const teamsUrl = `https://teams.microsoft.com/l/chat/0/0?users=${encodeURIComponent(teamsEmail)}&message=${encodeURIComponent(message)}`;
+        
+        setTimeout(() => {
+          window.open(teamsUrl, '_blank');
+        }, 1000);
+      }
+    }
+    
+    function showNotification(message) {
+      const banner = document.getElementById('notificationBanner');
+      banner.textContent = message;
+      banner.classList.add('show');
+      
+      setTimeout(() => {
+        banner.classList.remove('show');
+      }, 5000);
+    }
+    
+    function checkNow() {
+      if (movies.length === 0) {
+        alert('Please add at least one movie to monitor');
+        return;
+      }
+      checkAllMovies();
+    }
+    
+    function addMovie() {
+      const title = document.getElementById('movieTitle').value.trim();
+      const apiUrl = document.getElementById('apiUrl').value.trim();
+      
+      if (!title || !apiUrl) {
+        alert('Please enter both movie title and API URL');
+        return;
+      }
+      
+      movies.push({
+        id: Date.now().toString(),
+        title,
+        apiUrl,
+        added: new Date().toISOString(),
+        lastChecked: null,
+        lastStatus: null
+      });
+      
+      saveMovies();
+      renderMovies();
+      
+      document.getElementById('movieTitle').value = '';
+      document.getElementById('apiUrl').value = '';
+    }
+    
+    function removeMovie(index) {
+      movies.splice(index, 1);
+      saveMovies();
+      renderMovies();
+    }
+    
+    function saveMovies() {
+      localStorage.setItem('movies', JSON.stringify(movies));
+    }
+    
+    function renderMovies() {
+      const container = document.getElementById('movieListContainer');
+      
+      if (movies.length === 0) {
+        container.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">No movies added yet</div>';
+        return;
+      }
+      
+      container.innerHTML = movies.map((movie, index) => `
+        <div class="movie-item">
+          <div class="movie-title">${escapeHtml(movie.title)}</div>
+          <div class="movie-status">
+            ${movie.lastStatus === 'available' ? '✅ Tickets Available!' : '⏳ Not Available Yet'}
+            ${movie.lastChecked ? '• Checked: ' + new Date(movie.lastChecked).toLocaleTimeString() : ''}
+          </div>
+          <button class="btn-remove" onclick="removeMovie(${index})">Remove</button>
+        </div>
+      `).join('');
+    }
+    
+    function updateUI() {
+      const statusDot = document.getElementById('statusDot');
+      const statusText = document.getElementById('statusText');
+      const toggleBtn = document.getElementById('toggleMonitoring');
+      const lastCheck = document.getElementById('lastCheck');
+      
+      if (isMonitoring) {
+        statusDot.classList.add('active');
+        statusText.textContent = `Monitoring Active (checks every ${checkInterval} min)`;
+        toggleBtn.textContent = 'Stop Monitoring';
+        toggleBtn.classList.remove('btn-primary');
+        toggleBtn.classList.add('btn-secondary');
+      } else {
+        statusDot.classList.remove('active');
+        statusText.textContent = 'Monitoring Inactive';
+        toggleBtn.textContent = 'Start Monitoring';
+        toggleBtn.classList.remove('btn-secondary');
+        toggleBtn.classList.add('btn-primary');
+        lastCheck.textContent = '';
+      }
+    }
+    
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>
